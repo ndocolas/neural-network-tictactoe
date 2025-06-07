@@ -1,0 +1,15 @@
+import random
+import numpy as np
+from minimax.minimax import minimax
+
+class MinimaxPlayer:
+    """
+    Adapter para o algoritmo minimax.
+    Responsabilidade única: escolher jogada com probabilidade de usar minimax.
+    """
+
+    def move(self, board: list[list[int]]) -> tuple[int, int]:
+        """
+        Retorna (linha, coluna). Com minimax, retorna o melhor lugar para jogar.
+        """
+        return minimax(board)
