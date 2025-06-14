@@ -1,5 +1,3 @@
-# tic_tac_toe/adapters/minimax_trainer.py
-
 import random
 import numpy as np
 from minimax.minimax import minimax
@@ -25,7 +23,6 @@ class MinimaxTrainer:
         free = [(i//3, i%3) for i,v in enumerate(flat) if v == 0]
 
         if random.random() <= self.p_minimax and free:
-            # inverte sinal: +1↔–1
             inv = [[-cell for cell in row] for row in board]
             r, c = minimax(inv)
             return (r, c)

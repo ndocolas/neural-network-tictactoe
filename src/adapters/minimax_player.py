@@ -1,5 +1,3 @@
-import random
-import numpy as np
 from minimax.minimax import minimax
 
 class MinimaxPlayer:

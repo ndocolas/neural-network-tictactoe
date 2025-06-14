@@ -23,6 +23,6 @@ class Neuron:
         :param inputs: array de shape (n_inputs,)
         :return: saída ativada
         """
-        extended = np.append(inputs, 1.0)      # adiciona input do bias = 1
+        extended = np.append(inputs, 1.0)
         z = float(np.dot(self.weights, extended))
         return self.activate(z)
