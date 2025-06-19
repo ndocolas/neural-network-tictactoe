@@ -1,124 +1,159 @@
-import numpy as np
+import csv
+import os
 import random
+from pathlib import Path
+from typing import List
+
+import numpy as np
 
 from entities.chromosome import Chromosome
-from usecases.advanced_fitness_evaluator import AdvancedFitnessEvaluator
+from usecases.score_evaluator import ScoreEvaluator
+
 
 class GeneticAlgorithm:
     """
-    GA com avaliação configurável por n_games:
-      80 % primeiros jogos p=0.5, 20 % últimos jogos p=1.0.
-      Inclui critério de parada automática por convergência de fitness.
+    Algoritmo Genético com:
+      • Avaliação por n_games (80 % p=0.5, 20 % p=1.0)
+      • Critério de parada por número de gerações
+      • Elitismo (melhor indivíduo segue intacto, preservando o mesmo ID)
+      • CSV por geração no formato IA,Score
     """
-    def __init__(self, population_size: int = 100, generations: int = 50, n_games: int = 10):
+
+    def __init__(
+        self,
+        population_size: int,
+        generations: int,
+        n_games: int,
+        out_dir: str | os.PathLike = "populations",
+    ):
+        # hiperparâmetros principais
         self.pop_size = population_size
         self.generations = generations
         self.n_games = n_games
 
+        # arquitetura da rede (fixa: 9-9-9)
         self.in_size = self.h_size = self.o_size = 9
-        self.mut_rate = 0.1
-
         self.vector_len = 180
-        self.evaluator = AdvancedFitnessEvaluator(self.in_size, self.h_size,
-                                                     self.o_size, n_games)
 
-    def _init_pop(self):
-        return [Chromosome(np.random.uniform(-1,1,self.vector_len))
-                for _ in range(self.pop_size)]
+        # GA
+        self.mut_rate = 0.1
+        self.evaluator = ScoreEvaluator(
+            self.in_size, self.h_size, self.o_size, n_games
+        )
 
-    def _select(self, pop):
-        return random.choice(pop)
+        # pasta de saída dos CSVs
+        self.out_path = Path(out_dir)
+        self.out_path.mkdir(parents=True, exist_ok=True)
 
-    def _crossover(self, a, b):
+        # reinicia contagem global de IDs (opcional)
+        # Chromosome._next_id = 0
+
+    def _init_pop(self) -> List[Chromosome]:
+        return [
+            Chromosome(np.random.uniform(-1, 1, self.vector_len))
+            for _ in range(self.pop_size)
+        ]
+
+    def _select_tournament(self, pop: List[Chromosome]) -> Chromosome:
+        """Retorna o melhor entre *k* indivíduos sorteados."""
+        return max(random.sample(pop, 2), key=lambda c: c.score)
+
+    def _crossover(self, father: Chromosome, mother: Chromosome):
         child_vec = np.zeros(self.vector_len)
         for i in range(self.vector_len):
-            child_vec[i] = (a.weights_vector[i] + b.weights_vector[i]) / 2.0
+            child_vec[i] = (father.weights_vector[i] + mother.weights_vector[i]) / 2.0
         return Chromosome(child_vec)
 
     def _mutate(self, chrom: Chromosome, verbose: bool = False) -> Chromosome:
         """
         Mutação real-coded:
-          • perturba ~mut_rate dos genes com ruído gaussiano suave
-          • 30 % de chance de um “burst” extra (1-3 genes) com ruído maior
-          • garante intervalo [-1, 1]
+          • perturba ~= mut_rate dos genes com N(0, 0.15)
+          • 30 % de chance de burst extra (1-3 genes) com N(0, 0.30)
+          • garante faixa [-1, 1]
+        (Modifica in-place — ID preservado)
         """
-        # --- novo objeto para não alterar o pai ---
-        child = Chromosome(chrom.weights_vector.copy())
-
-        # máscara: muta cerca de mut_rate * vector_len genes
         mask = np.random.rand(self.vector_len) < self.mut_rate
-        child.weights_vector[mask] += np.random.normal(0, 0.15, size=mask.sum())
+        chrom.weights_vector[mask] += np.random.normal(0, 0.15, mask.sum())
 
-        # burst extra
-        extra_count = 0
-        if random.random() < 0.3:
-            extra_idx = np.random.choice(self.vector_len,
-                                         size=random.randint(1, 3),
-                                         replace=False)
-            child.weights_vector[extra_idx] += np.random.normal(0, 0.30,
-                                                                size=len(extra_idx))
-            extra_count = len(extra_idx)
+        if random.random() < 0.3:  # burst extra
+            idx = np.random.choice(
+                self.vector_len, size=random.randint(1, 3), replace=False
+            )
+            chrom.weights_vector[idx] += np.random.normal(0, 0.30, len(idx))
 
-        # mantém pesos no intervalo inicial
-        np.clip(child.weights_vector, -1, 1, out=child.weights_vector)
+        np.clip(chrom.weights_vector, -1, 1, out=chrom.weights_vector)
 
         if verbose:
-            total = mask.sum() + extra_count
-            print(f"Total mutations: {total}")
+            print(f"Total mutations: {mask.sum()}")
 
-        return child
-    
-    def _select_tournament(self, pop, k=3):
-        """Retorna o melhor entre k indivíduos sorteados."""
-        return max(random.sample(pop, k), key=lambda c: c.fitness)
+        return chrom
 
+    # ------------------------------------------------------------------ #
+    # ------------------------ CSV UTIL -------------------------------- #
+    # ------------------------------------------------------------------ #
+    def _save_population_csv(self, generation: int, pop: List[Chromosome]) -> None:
+        """Grava CSV `population_gen{generation}.csv` com colunas IA,Score."""
+        file_path = self.out_path / f"population_gen{generation}.csv"
+        with file_path.open("w", newline="") as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["IA", "Score"])
+            for chrom in pop:
+                writer.writerow([chrom.id, f"{chrom.score:.4f}"])
 
-    def evolve(self, verbose: bool = False):
+    # ------------------------------------------------------------------ #
+    # --------------------------- EVOLVE ------------------------------- #
+    # ------------------------------------------------------------------ #
+    def evolve(self, verbose: bool = False) -> np.ndarray:
         pop = self._init_pop()
-        best_vec  = None
-        best_fit  = -float('inf')
+        best_chrom: Chromosome | None = None
+        best_fit = -float("inf")
 
         for g in range(1, self.generations + 1):
-            # ---------- avaliação ----------
+            # ----------- Avaliação -----------
             for c in pop:
-                c.fitness = self.evaluator.evaluate(c.weights_vector, g)
+                c.score = self.evaluator.evaluate(c.weights_vector)
 
-            pop.sort(key=lambda c: c.fitness, reverse=True)
-            if best_vec is None:                   # primeira geração
-                best_vec = pop[0].weights_vector.copy()
-                best_fit = pop[0].fitness
+            # ordena descendente por score
+            pop.sort(key=lambda c: c.score, reverse=True)
 
-            if pop[0].fitness > best_fit:
-                best_fit = pop[0].fitness
-                best_vec = pop[0].weights_vector.copy()
+            # CSV da geração atual
+            self._save_population_csv(g, pop)
 
+            # atualiza melhor global
+            if pop[0].score > best_fit:
+                best_fit = pop[0].score
+                best_chrom = pop[0]
+
+            # logging
             if verbose:
-                avg_fit = sum(c.fitness for c in pop) / len(pop)
+                avg_fit = sum(c.score for c in pop) / len(pop)
                 print(
-                  f"Gen {g}/{self.generations} | "
-                  f"Best(gen): {pop[0].fitness:.2f}  "
-                  f"Avg: {avg_fit:.2f}  "
-                  f"Best(ever): {best_fit:.2f}"
+                    f"Gen {g:>3}/{self.generations} | "
+                    f"Best(gen): {pop[0].score:>7.2f} | "
+                    f"Best(ever): {best_fit:>7.2f}"
                 )
 
-            next_pop = [Chromosome(best_vec.copy())]  # elitismo
+            # ----------- Reprodução -----------
+            best = pop[0]
+            if verbose:
+                print(f"{best}")
+            next_pop: List[Chromosome] = [best]  # elitismo (mesma instância)
 
             while len(next_pop) < self.pop_size:
-                p1 = self._select_tournament(pop, k=3)
-                p2 = self._select_tournament(pop, k=3)
-                while p2 is p1:                       # evita clone
-                    p2 = self._select_tournament(pop, k=3)
+                p1 = self._select_tournament(pop)
+                p2 = self._select_tournament(pop)
+                while p2 is p1:
+                    p2 = self._select_tournament(pop)
 
                 child = self._crossover(p1, p2)
-                if g > 30: 
-                    child = self._mutate(child)
-                child.fitness = None                  # ainda não avaliado
+                if g > round(self.generations * 0.3):
+                    self._mutate(child)
                 next_pop.append(child)
 
-            pop = next_pop
+            pop = next_pop  # nova população (sem score ainda)
 
         if verbose:
             print("\nTreinamento completo.\n")
 
-        return best_vec
-
+        # garante retorno mesmo se nenhuma melhoria após g=1
+        return (best_chrom or pop[0]).weights_vector

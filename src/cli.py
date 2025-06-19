@@ -104,7 +104,6 @@ class TicTacToeCLI:
                 else:
                     print("\nEmpate!")
 
-                input("\nPressione Enter para voltar ao menu...")
                 return
 
             turn *= -1
@@ -112,13 +111,14 @@ class TicTacToeCLI:
     # ---------- modo 2 ----------
     def start_train_network(self):
         gens = int(input("Quantas gerações deseja treinar? ").strip())
-        ga = GeneticAlgorithm(population_size=200, generations=gens, n_games=10)
+        games = int(input("Quantos jogos deseja jogar? ").strip())
+        pop_size = int(input("Qual tamanho da populacao? ").strip())
+        ga = GeneticAlgorithm(population_size=pop_size, generations=gens, n_games=games)
 
         print("\nIniciando treinamento...\n")
         best = ga.evolve(verbose=True)
         np.save("rnn.npy", best)
         print("\nTreino concluído. Melhor weights_vector salvo em 'rnn.npy'.")
-        input("\nPressione Enter para voltar ao menu...")
 
     # ---------- modo 3 ----------
     def start_game_against_network(self):
@@ -128,7 +128,7 @@ class TicTacToeCLI:
         nn = NeuralNetwork(9, 9, 9, weights_vector)
         board = np.zeros((3, 3), dtype=int)
 
-        turn = +1  # Rede Neural começa como X (+1)
+        turn = -1  # Rede Neural começa como X (+1)
 
         while True:
             self.clear_screen()
@@ -153,7 +153,6 @@ class TicTacToeCLI:
                 else:
                     print("\nEmpate!")
 
-                input("\nPressione Enter para voltar ao menu...")
                 return
 
             turn *= -1

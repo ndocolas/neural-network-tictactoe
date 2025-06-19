@@ -10,4 +10,6 @@ class MinimaxPlayer:
         """
         Retorna (linha, coluna). Com minimax, retorna o melhor lugar para jogar.
         """
-        return minimax(board)
+        row, col = minimax(board)
+
+        return row, col
