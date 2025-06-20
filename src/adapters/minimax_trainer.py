@@ -1,6 +1,6 @@
 import random
 import numpy as np
-from minimax.minimax import minimax
+from src.minimax.minimax import minimax
 
 class MinimaxTrainer:
     """

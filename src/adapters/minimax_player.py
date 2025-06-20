@@ -1,4 +1,4 @@
-from minimax.minimax import minimax
+from src.minimax.minimax import minimax
 
 class MinimaxPlayer:
     """

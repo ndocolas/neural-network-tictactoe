@@ -6,8 +6,8 @@ from typing import List
 
 import numpy as np
 
-from entities.chromosome import Chromosome
-from usecases.score_evaluator import ScoreEvaluator
+from src.entities.chromosome import Chromosome
+from src.usecases.score_evaluator import ScoreEvaluator
 
 
 class GeneticAlgorithm:
