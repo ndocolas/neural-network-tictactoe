@@ -303,14 +303,14 @@ class FrameTreinarRede(tk.Frame):
             return
         fig = Figure(figsize=(3.5,2.5), dpi=100)
         ax = fig.add_subplot(111)
-        # Scatter de todos os fitness
+        # Scatter de todos os fitness (ruim)
         for g, fit_list in enumerate(self.all_fitness):
-            ax.scatter([g+1]*len(fit_list), fit_list, color="#888", s=12, alpha=0.7)
-        # Linha do melhor
-        ax.plot(range(1, len(self.fitness_history)+1), self.fitness_history, marker="o", color="blue", label="Melhor")
-        # Linha do fitness médio
+            ax.scatter([g+1]*len(fit_list), fit_list, color="#d62728", s=12, alpha=0.7, label="Indivíduos" if g==0 else "")
+        # Linha do melhor (verde)
+        ax.plot(range(1, len(self.fitness_history)+1), self.fitness_history, marker="o", color="#1ca81c", label="Melhor")
+        # Linha do fitness médio (amarelo)
         if self.mean_fitness:
-            ax.plot(range(1, len(self.mean_fitness)+1), self.mean_fitness, marker="s", color="green", linestyle="--", label="Média")
+            ax.plot(range(1, len(self.mean_fitness)+1), self.mean_fitness, marker="s", color="#e6b800", linestyle="--", label="Média")
         ax.set_title("Fitness por Geração")
         ax.set_xlabel("Geração")
         ax.set_ylabel("Fitness")
