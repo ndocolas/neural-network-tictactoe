@@ -1,5 +1,5 @@
-import numpy as np
 from entities.layer import Layer
+import numpy as np
 
 class NeuralNetwork:
     """

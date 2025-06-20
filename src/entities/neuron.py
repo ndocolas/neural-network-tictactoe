@@ -1,5 +1,5 @@
+from math import exp
 import numpy as np
-from math import exp, isfinite
 
 class Neuron:
     """

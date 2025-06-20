@@ -1,5 +1,5 @@
-import numpy as np
 from typing import Optional
+import numpy as np
 
 class Chromosome:
     """
@@ -21,9 +21,13 @@ class Chromosome:
         self.score: float = 0.0
 
     # utilitário opcional, facilita cópias mantendo ou não o id
-    def clone(self, keep_id: bool = False) -> "Chromosome":
-        return Chromosome(self.weights_vector.copy(),
-                          uid=self.id if keep_id else None)
+    def clone(self, keep_id: bool = False, keep_score: bool = True) -> "Chromosome":
+        new_chrom = Chromosome(self.weights_vector.copy(),
+                               uid=self.id if keep_id else None)
+        if keep_score:
+            new_chrom.score = self.score
+        return new_chrom
+
 
     def set_score(self, score: float):
         self.score = score

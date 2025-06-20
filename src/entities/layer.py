@@ -1,5 +1,5 @@
-import numpy as np
 from entities.neuron import Neuron
+import numpy as np
 
 class Layer:
     """
