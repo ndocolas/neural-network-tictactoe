@@ -37,7 +37,7 @@ class ScoreEvaluator:
 
         for g in range(self.n_games):
             p_minimax   = 0.5 if g < int(self.n_games * 0.80) else 1.0
-            mask_invalid = g < int(self.n_games * 0.30)  # “rodinhas” só no início
+            mask_invalid = g < int(self.n_games * 0.10)  # “rodinhas” só no início
             total += self._play_one(ai, p_minimax, mask_invalid)
 
         return total / self.n_games
