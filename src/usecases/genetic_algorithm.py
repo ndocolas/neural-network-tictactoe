@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List
 import numpy as np
 import random
+import csv
 import os
 
 class GeneticAlgorithm:
@@ -23,8 +24,6 @@ class GeneticAlgorithm:
         population_size: int,
         generations: int,
         n_games: int,
-        out_dir: str | os.PathLike = "populations",
-        seed: int | None = None,
     ):
         # ----- Hiperparâmetros principais -----
         self.pop_size = population_size
@@ -36,21 +35,15 @@ class GeneticAlgorithm:
         self.vector_len = 180
 
         # Taxas do GA
-        self.mut_rate = 0.10
+        self.mut_rate = 0.20
+
+        self.out_path = Path("populations")
+        self.out_path.mkdir(parents=True, exist_ok=True)
 
         # Avaliador de fitness
         self.evaluator = ScoreEvaluator(
             self.in_size, self.h_size, self.o_size, n_games
         )
-
-        # Pasta de saída
-        self.out_path = Path(out_dir)
-        self.out_path.mkdir(parents=True, exist_ok=True)
-
-        # Semente opcional p/ reprodutibilidade
-        if seed is not None:
-            random.seed(seed)
-            np.random.seed(seed)
 
     def _init_pop(self) -> List[Chromosome]:
         return [Chromosome(np.random.uniform(-1, 1, self.vector_len))
@@ -66,26 +59,41 @@ class GeneticAlgorithm:
             child_vec[i] = (dad.weights_vector[i] + mom.weights_vector[i]) / 2.0
         return Chromosome(child_vec)
 
+    def _save_population_csv(self, generation: int, pop: List[Chromosome]) -> None:
+        """Grava CSV `population_gen{generation}.csv` com colunas IA,Score."""
+        file_path = self.out_path / f"population_gen{generation}.csv"
+        with file_path.open("w", newline="") as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["IA", "Score"])
+            for chrom in pop:
+                writer.writerow([chrom.id, f"{chrom.score:.4f}"])
+
     def _mutate(self, chrom: Chromosome, verbose: bool = False) -> None:
         """
-        Mutação real-coded in-place:
-          • Perturba ~mut_rate dos genes com N(0, 0.15)
-          • 30 % de chance de “burst” (1-3 genes) com N(0, 0.30)
-          • Garante clamp em [-1, 1]
-        """
-        mask = np.random.rand(self.vector_len) < self.mut_rate
-        chrom.weights_vector[mask] += np.random.normal(0, 0.15, mask.sum())
+        Mutação real-coded in-place ‒ versão simples:
 
+          • Cada gene tem prob. `mut_rate` de ser mutado.
+          • Genes mutados recebem NOVO valor U(-1, 1) — não é perturbação.
+          • (Opcional) “burst” extra: 30 % de chance de ainda trocar 1–3 genes.
+          • Após a troca, o vetor já está garantidamente dentro de [-1, 1].
+        """
+        # ---- mutação normal ------------------------------------------------
+        mask = np.random.rand(self.vector_len) < self.mut_rate
+        num_mut = mask.sum()
+        if num_mut:
+            chrom.weights_vector[mask] = np.random.uniform(-1, 1, num_mut)
+
+        # ---- burst opcional ------------------------------------------------
         if random.random() < 0.30:
-            idx = np.random.choice(
+            extra = np.random.choice(
                 self.vector_len, size=random.randint(1, 3), replace=False
             )
-            chrom.weights_vector[idx] += np.random.normal(0, 0.30, len(idx))
-
-        np.clip(chrom.weights_vector, -1, 1, out=chrom.weights_vector)
+            chrom.weights_vector[extra] = np.random.uniform(-1, 1, extra.size)
+            num_mut += extra.size
 
         if verbose:
-            print(f"Total mutations: {mask.sum()}")
+            print(f"Total genes mutated: {num_mut}")
+
 
     def evolve(self, verbose: bool = False) -> np.ndarray:
         """Executa o GA e devolve o vetor de pesos do melhor cromossomo."""
@@ -97,6 +105,7 @@ class GeneticAlgorithm:
                 c.score = self.evaluator.evaluate(c.weights_vector)
 
             pop.sort(key=lambda c: c.score, reverse=True)
+            self._save_population_csv(g, pop)
 
             if best_global is None or pop[0].score > best_global.score:
                 best_global = pop[0].clone(keep_id=True)
