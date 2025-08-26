@@ -2,7 +2,7 @@
 
 This project runs a neural network truly from scratch: every piece is hand-coded — the neuron, the layers, the MLP itself, the chromosome representation, the Genetic Algorithm, and the Minimax engine. No high-level frameworks, no shortcuts: we implemented the math, the evolutionary loop, and the game logic by hand to train an AI that learns to play Tic-Tac-Toe against a Minimax opponent (with and without randomness). The result is a compact, hands-on lab where you can watch the network come to life, evolve, and play, with a simple interface to train and test.
 
-- 🎥 Demo: https://www.youtube.com/watch?v=Ea-CpFXAJww
+Demo: https://www.youtube.com/watch?v=Ea-CpFXAJww
 
 ---
 
@@ -48,19 +48,13 @@ python main.py
 ## Project Structure (high level)
 
 ```
-/Entities        # board, move, individual/chromosome, etc.
- /Services       # neural net math, GA operators, evaluation
- /UseCases       # training loops, evaluation flows, gameplay modes
- /Adapters       # Minimax (100% and 50%) implementations
- gui.py          # simple UI (train/play)
- main.py         # CLI entry (train/evaluate)
+src/
+├─ adapters/ - Integration layer that wires the core logic to opponents and training/play flows (e.g., wraps Minimax for use by 
+├─ entities/ - Domain models and NN building blocks (neuron, layer, network, chromosome) as plain data/logic types.
+├─ minimax/ - Minimax search engine and its variants used as opponents during training and play.
+├─ services/ - Game-level services such as Tic-Tac-Toe simulation and other stateless operations.
+├─ ui/ - Simple user interface to start training, monitor progress, and play matches.
+├─ usecases/ - Orchestration of workflows: training loops, evaluation routines, and gameplay modes.
+└─ utils/ - Shared helpers and small utilities used across the project.
 ```
-
----
-
-## Results (summary)
-
-- Learns stable play; draws consistently vs **optimal Minimax**.
-- Competitive vs **mixed Minimax** depending on training settings.
-
 ---
