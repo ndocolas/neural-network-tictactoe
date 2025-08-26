@@ -58,3 +58,6 @@ src/
 └─ utils/ - Shared helpers and small utilities used across the project.
 ```
 ---
+
+## License
+This project is open-source. See the [LICENSE](LICENSE) file for more details.
